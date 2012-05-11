@@ -1,26 +1,31 @@
-#ifndef _FEATURE_FUNCTION_H_
-#define _FEATURE_FUNCTION_H_
+#ifndef moses_FeatureFunction_h
+#define moses_FeatureFunction_h
 
 #include <vector>
 
 #include "ScoreProducer.h"
 
-namespace Moses {
+namespace Moses
+{
 
 class TargetPhrase;
 class Hypothesis;
+class ChartHypothesis;
 class FFState;
+class InputType;
 class ScoreComponentCollection;
 
-class FeatureFunction: public ScoreProducer {
+class FeatureFunction: public ScoreProducer
+{
 
 public:
-  virtual bool IsStateless() const = 0;	
+  virtual bool IsStateless() const = 0;
   virtual ~FeatureFunction();
 
 };
 
-class StatelessFeatureFunction: public FeatureFunction {
+class StatelessFeatureFunction: public FeatureFunction
+{
 
 public:
   //! Evaluate for stateless feature functions. Implement this.
@@ -37,7 +42,8 @@ public:
   bool IsStateless() const;
 };
 
-class StatefulFeatureFunction: public FeatureFunction {
+class StatefulFeatureFunction: public FeatureFunction
+{
 
 public:
 
@@ -52,9 +58,14 @@ public:
     const Hypothesis& cur_hypo,
     const FFState* prev_state,
     ScoreComponentCollection* accumulator) const = 0;
-  
-  //! return the state associated with the empty hypothesis
-  virtual const FFState* EmptyHypothesisState() const = 0;
+
+  virtual FFState* EvaluateChart(
+    const ChartHypothesis& /* cur_hypo */,
+    int /* featureID */,
+    ScoreComponentCollection* accumulator) const = 0;
+
+  //! return the state associated with the empty hypothesis for a given sentence
+  virtual const FFState* EmptyHypothesisState(const InputType &input) const = 0;
 
   bool IsStateless() const;
 };

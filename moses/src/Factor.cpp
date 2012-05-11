@@ -21,31 +21,26 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "Factor.h"
 
+#include <boost/functional/hash.hpp>
+
 using namespace std;
 
 namespace Moses
 {
-Factor::Factor(FactorDirection direction, FactorType factorType, const std::string *factorString, size_t id)
-://m_direction(direction)
-//,m_factorType(factorType)
-m_ptrString(factorString)
-,m_id(id)
-{}
-
-Factor::Factor(FactorDirection direction, FactorType factorType, const std::string *factorString)
-//:m_direction(direction)
-//,m_factorType(factorType)
-:m_ptrString(factorString)
-,m_id(NOT_FOUND)
-{}
 
 TO_STRING_BODY(Factor)
 
 // friend
 ostream& operator<<(ostream& out, const Factor& factor)
 {
-	out << factor.GetString();
-	return out;
+  out << factor.GetString();
+  return out;
+}
+
+size_t hash_value(const Factor& f)
+{
+  boost::hash<size_t> hasher;
+  return hasher(f.GetId());
 }
 
 }

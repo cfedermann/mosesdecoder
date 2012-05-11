@@ -19,24 +19,35 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
-
-#include <set>
-#include <string>
+#ifndef moses_FactorCollection_h
+#define moses_FactorCollection_h
 
 #ifdef WITH_THREADS
 #include <boost/thread/shared_mutex.hpp>
 #endif
 
+#include "util/murmur_hash.hh"
+#include <boost/unordered_set.hpp>
+
+#include <functional>
+#include <string>
+
+#include "util/string_piece.hh"
 #include "Factor.h"
 
 namespace Moses
 {
 
-class LanguageModel;
-
-typedef std::set<Factor> FactorSet;
-typedef std::set<std::string> StringSet;
+/* We don't want Factor to be copyable by anybody.  But we also want to store
+ * it in an STL container.  The solution is that Factor's copy constructor is
+ * private and friended to FactorFriend.  The STL containers can delegate
+ * copying, so friending the container isn't sufficient.  STL containers see
+ * FactorFriend's public copy constructor and everybody else sees Factor's
+ * private copy constructor.  
+ */
+struct FactorFriend {
+  Factor in;
+};
 
 /** collection of factors
  *
@@ -48,42 +59,64 @@ typedef std::set<std::string> StringSet;
  */
 class FactorCollection
 {
-	friend std::ostream& operator<<(std::ostream&, const FactorCollection&);
+  friend std::ostream& operator<<(std::ostream&, const FactorCollection&);
 
-protected:
-	static FactorCollection s_instance;
-#ifdef WITH_THREADS   
-    //reader-writer lock
-    boost::shared_mutex m_accessLock;
+  struct HashFactor : public std::unary_function<const FactorFriend &, std::size_t> {
+    std::size_t operator()(const StringPiece &str) const {
+      return util::MurmurHashNative(str.data(), str.size());
+    }
+    std::size_t operator()(const FactorFriend &factor) const {
+      return (*this)(factor.in.GetString());
+    }
+  };
+  struct EqualsFactor : public std::binary_function<const FactorFriend &, const FactorFriend &, bool> {
+    bool operator()(const FactorFriend &left, const FactorFriend &right) const {
+      return left.in.GetString() == right.in.GetString();
+    }
+    bool operator()(const FactorFriend &left, const StringPiece &right) const {
+      return left.in.GetString() == right;
+    }
+    bool operator()(const StringPiece &left, const FactorFriend &right) const {
+      return left == right.in.GetString();
+    }
+  };
+  typedef boost::unordered_set<FactorFriend, HashFactor, EqualsFactor> Set;
+  Set m_set;
+
+  static FactorCollection s_instance;
+#ifdef WITH_THREADS
+  //reader-writer lock
+  mutable boost::shared_mutex m_accessLock;
 #endif
 
-	size_t		m_factorId; /**< unique, contiguous ids, starting from 0, for each factor */	
-	FactorSet m_collection; /**< collection of all factors */
-	StringSet m_factorStringCollection; /**< collection of unique string used by factors */
+  size_t m_factorId; /**< unique, contiguous ids, starting from 0, for each factor */
 
-	//! constructor. only the 1 static variable can be created
-	FactorCollection()
-	:m_factorId(0)
-	{}
+  //! constructor. only the 1 static variable can be created
+  FactorCollection()
+    :m_factorId(0)
+  {}
 
-public:		
-	static FactorCollection& Instance() { return s_instance; }
+public:
+  static FactorCollection& Instance() {
+    return s_instance;
+  }
 
-	//! Destructor
-	~FactorCollection();
+  ~FactorCollection();
 
-	//! Test to see whether a factor exists
-	bool Exists(FactorDirection direction, FactorType factorType, const std::string &factorString);	
-	/** returns a factor with the same direction, factorType and factorString. 
-	*	If a factor already exist in the collection, return the existing factor, if not create a new 1
-	*/
-	const Factor *AddFactor(FactorDirection direction, FactorType factorType, const std::string &factorString);	
-	//! Load list of factors. Deprecated
-	void LoadVocab(FactorDirection direction, FactorType factorType, const std::string &filePath);
-	
-	TO_STRING();
-	
+  /** returns a factor with the same direction, factorType and factorString.
+  *	If a factor already exist in the collection, return the existing factor, if not create a new 1
+  */
+  const Factor *AddFactor(const StringPiece &factorString);
+
+  // TODO: remove calls to this function, replacing them with the simpler AddFactor(factorString)
+  const Factor *AddFactor(FactorDirection /*direction*/, FactorType /*factorType*/, const StringPiece &factorString) {
+    return AddFactor(factorString);
+  }
+
+  TO_STRING();
+
 };
 
 
 }
+#endif

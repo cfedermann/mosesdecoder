@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_TranslationOptionCollectionText_h
+#define moses_TranslationOptionCollectionText_h
 
 #include "TranslationOptionCollection.h"
 
@@ -29,18 +30,20 @@ namespace Moses
 class Sentence;
 class LMList;
 
-class TranslationOptionCollectionText : public TranslationOptionCollection {
- public:
-	void ProcessUnknownWord(		size_t sourcePos);
-	
-	TranslationOptionCollectionText(Sentence const& inputSentence, size_t maxNoTransOptPerCoverage, float translationOptionThreshold);
-	
-	bool HasXmlOptionsOverlappingRange(size_t startPosition, size_t endPosition) const;
-	
-	void CreateXmlOptionsForRange(size_t startPosition, size_t endPosition);
-	
-	
+class TranslationOptionCollectionText : public TranslationOptionCollection
+{
+public:
+  void ProcessUnknownWord(size_t sourcePos);
+
+  TranslationOptionCollectionText(const TranslationSystem* system, Sentence const& inputSentence, size_t maxNoTransOptPerCoverage, float translationOptionThreshold);
+
+  bool HasXmlOptionsOverlappingRange(size_t startPosition, size_t endPosition) const;
+
+  void CreateXmlOptionsForRange(size_t startPosition, size_t endPosition);
+
+
 };
 
 }
 
+#endif

@@ -1,80 +1,86 @@
 /*
  *  ScoreArray.h
- *  met - Minimum Error Training
+ *  mert - Minimum Error Rate Training
  *
  *  Created by Nicola Bertoldi on 13/05/08.
  *
  */
 
-#ifndef SCORE_ARRAY_H
-#define SCORE_ARRAY_H
+#ifndef MERT_SCORE_ARRAY_H_
+#define MERT_SCORE_ARRAY_H_
 
-#define SCORES_TXT_BEGIN "SCORES_TXT_BEGIN_0"
-#define SCORES_TXT_END "SCORES_TXT_END_0"
-#define SCORES_BIN_BEGIN "SCORES_BIN_BEGIN_0"
-#define SCORES_BIN_END "SCORES_BIN_END_0"
-
-using namespace std;
-
-#include <limits>
 #include <vector>
 #include <iostream>
-#include <fstream>
+#include <string>
 
-#include "Util.h"
 #include "ScoreStats.h"
+
+const char SCORES_TXT_BEGIN[] = "SCORES_TXT_BEGIN_0";
+const char SCORES_TXT_END[] = "SCORES_TXT_END_0";
+const char SCORES_BIN_BEGIN[] = "SCORES_BIN_BEGIN_0";
+const char SCORES_BIN_END[] = "SCORES_BIN_END_0";
 
 class ScoreArray
 {
-protected:
-	scorearray_t array_;
-	std::string score_type;
-	size_t number_of_scores;
-	
-private:
-	std::string  idx; // idx to identify the utterance, it can differ from the index inside the vector
+ private:
+  scorearray_t m_array;
+  std::string m_score_type;
+  std::size_t m_num_scores;
 
-	
+  // indexx to identify the utterance.
+  // It can differ from the index inside the vector.
+  std::string  m_index;
+
 public:
-	ScoreArray();
-	
-	~ScoreArray(){};
-		
-	inline void clear() { array_.clear(); }
-	
-	inline std::string getIndex(){ return idx; }
-	inline void setIndex(const std::string& value){ idx=value; }
+  ScoreArray();
+  ~ScoreArray() {}
 
-//	inline ScoreStats get(size_t i){ return array_.at(i); }
-	
-	inline ScoreStats&  get(size_t i){ return array_.at(i); }
-	inline const ScoreStats&  get(size_t i)const{ return array_.at(i); }
+  void clear() { m_array.clear(); }
 
-	void add(const ScoreStats& e){ array_.push_back(e); }
+  std::string getIndex() const { return m_index; }
 
-	void merge(ScoreArray& e);
+  void setIndex(const std::string& value) { m_index = value; }
 
-	inline std::string name() const{ return score_type; };
-	inline void name(std::string &sctype){ score_type = sctype; };
+  ScoreStats& get(std::size_t i) { return m_array.at(i); }
 
-	inline size_t size(){ return array_.size(); }
-	inline size_t NumberOfScores() const{ return number_of_scores; }
-	inline void NumberOfScores(size_t v){ number_of_scores = v; }
-	
-	void savetxt(ofstream& outFile, const std::string& sctype);
-	void savebin(ofstream& outFile, const std::string& sctype);
-	void save(ofstream& outFile, const std::string& sctype, bool bin=false);
-	void save(const std::string &file, const std::string& sctype, bool bin=false);
-	inline void save(const std::string& sctype, bool bin=false){ save("/dev/stdout", sctype, bin); }
-	
-	void loadtxt(ifstream& inFile, size_t n);
-	void loadbin(ifstream& inFile, size_t n);
-	void load(ifstream& inFile);
-	void load(const std::string &file);
-	
-	bool check_consistency();
+  const ScoreStats& get(std::size_t i) const { return m_array.at(i); }
+
+  void add(const ScoreStats& e) { m_array.push_back(e); }
+
+  //ADDED BY TS
+  void swap(std::size_t i, std::size_t j) {
+    std::swap(m_array[i], m_array[j]);
+  }
+
+  void resize(std::size_t new_size) {
+    m_array.resize(std::min(new_size, m_array.size()));
+  }
+  //END_ADDED
+
+  void merge(ScoreArray& e);
+
+  std::string name() const { return m_score_type; }
+
+  void name(std::string &score_type) { m_score_type = score_type; }
+
+  std::size_t size() const { return m_array.size(); }
+
+  std::size_t NumberOfScores() const { return m_num_scores; }
+
+  void NumberOfScores(std::size_t v) { m_num_scores = v; }
+
+  void savetxt(std::ostream* os, const std::string& score_type);
+  void savebin(std::ostream* os, const std::string& score_type);
+  void save(std::ostream* os, const std::string& score_type, bool bin=false);
+  void save(const std::string &file, const std::string& score_type, bool bin=false);
+  void save(const std::string& score_type, bool bin=false);
+
+  void loadtxt(std::istream* is, std::size_t n);
+  void loadbin(std::istream* is, std::size_t n);
+  void load(std::istream* is);
+  void load(const std::string &file);
+
+  bool check_consistency() const;
 };
 
-
-#endif
-
+#endif  // MERT_SCORE_ARRAY_H_

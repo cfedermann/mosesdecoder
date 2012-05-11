@@ -1,74 +1,119 @@
 /*
  *  FeatureStats.h
- *  met - Minimum Error Training
+ *  mert - Minimum Error Rate Training
  *
  *  Created by Nicola Bertoldi on 13/05/08.
  *
  */
 
-#ifndef FEATURE_STATS_H
-#define FEATURE_STATS_H
+#ifndef MERT_FEATURE_STATS_H_
+#define MERT_FEATURE_STATS_H_
 
-using namespace std;
-
-#include <limits>
-#include <vector>
+#include <cstring>
 #include <iostream>
+#include <map>
+#include <string>
+#include <vector>
+#include "Types.h"
 
-#include "Util.h"
+// Minimal sparse vector
+class SparseVector {
+public:
+  typedef std::map<std::size_t,FeatureStatsType> fvector_t;
+  typedef std::map<std::string, std::size_t> name2id_t;
+  typedef std::vector<std::string> id2name_t;
 
-#define FEATURE_STATS_MIN (numeric_limits<FeatureStatsType>::min())
-#define ATOFST(str) ((FeatureStatsType) atof(str))
+  FeatureStatsType get(const std::string& name) const;
+  FeatureStatsType get(std::size_t id) const;
+  void set(const std::string& name, FeatureStatsType value);
+  void clear();
+  std::size_t size() const { return m_fvector.size(); }
 
-#define featbytes_ (entries_*sizeof(FeatureStatsType))
+  void write(std::ostream& out, const std::string& sep = " ") const;
+
+  SparseVector& operator-=(const SparseVector& rhs);
+
+private:
+  static name2id_t m_name_to_id;
+  static id2name_t m_id_to_name;
+  fvector_t m_fvector;
+};
+
+SparseVector operator-(const SparseVector& lhs, const SparseVector& rhs);
 
 class FeatureStats
 {
 private:
-	featstats_t array_;		
-	size_t entries_;
-	size_t available_;
-		
+  std::size_t m_available_size;
+  std::size_t m_entries;
+
+  // TODO: Use smart pointer for exceptional-safety.
+  featstats_t m_array;
+  SparseVector m_map;
+
 public:
-	FeatureStats();
-	FeatureStats(const size_t size);
-	FeatureStats(const FeatureStats &stats);
-	FeatureStats(std::string &theString);
-	FeatureStats& operator=(const FeatureStats &stats);
-	
-	~FeatureStats();
-	
-	bool isfull(){return (entries_ < available_)?0:1; }
-	void expand();
-	void add(FeatureStatsType v);
-		
-	inline void clear() { memset((void*) array_,0,featbytes_); }
-	
-	inline FeatureStatsType get(size_t i){ return array_[i]; }
-	inline FeatureStatsType get(size_t i)const{ return array_[i]; }
-	inline featstats_t getArray() const { return array_; }
+  FeatureStats();
+  explicit FeatureStats(const std::size_t size);
+  explicit FeatureStats(std::string &theString);
 
-	void set(std::string &theString);
+  ~FeatureStats();
 
-	inline size_t bytes() const{ return featbytes_; }
-	inline size_t size() const{ return entries_; }
-	inline size_t available() const{ return available_; }
-	
-	void savetxt(const std::string &file);
-	void savetxt(ofstream& outFile);
-	void savebin(ofstream& outFile);
-	inline void savetxt(){ savetxt("/dev/stdout"); }
-	
-	void loadtxt(const std::string &file);
-	void loadtxt(ifstream& inFile);
-	void loadbin(ifstream& inFile);
+  // We intentionally allow copying.
+  FeatureStats(const FeatureStats &stats);
+  FeatureStats& operator=(const FeatureStats &stats);
 
-	inline void reset(){ entries_ = 0; clear(); }
-	
-  /**write the whole object to a stream*/
-  friend ostream& operator<<(ostream& o, const FeatureStats& e);
+  void Copy(const FeatureStats &stats);
+
+  bool isfull() const { return (m_entries < m_available_size) ? 0 : 1; }
+  void expand();
+  void add(FeatureStatsType v);
+  void addSparse(const std::string& name, FeatureStatsType v);
+
+  void clear() {
+    memset((void*)m_array, 0, GetArraySizeWithBytes());
+    m_map.clear();
+  }
+
+  void reset() {
+    m_entries = 0;
+    clear();
+  }
+
+  FeatureStatsType get(std::size_t i) { return m_array[i]; }
+  FeatureStatsType get(std::size_t i)const { return m_array[i]; }
+  featstats_t getArray() const { return m_array; }
+
+  const SparseVector& getSparse() const { return m_map; }
+
+  void set(std::string &theString);
+
+  inline std::size_t bytes() const { return GetArraySizeWithBytes(); }
+
+  std::size_t GetArraySizeWithBytes() const {
+    return m_entries * sizeof(FeatureStatsType);
+  }
+
+  std::size_t size() const { return m_entries; }
+
+  std::size_t available() const { return m_available_size; }
+
+  void savetxt(const std::string &file);
+  void savetxt(std::ostream* os);
+  void savebin(std::ostream* os);
+  void savetxt();
+
+  void loadtxt(const std::string &file);
+  void loadtxt(std::istream* is);
+  void loadbin(std::istream* is);
+
+  /**
+   * Write the whole object to a stream.
+   */
+  friend std::ostream& operator<<(std::ostream& o, const FeatureStats& e);
 };
 
-#endif
+//ADEED_BY_TS
+bool operator==(const FeatureStats& f1, const FeatureStats& f2);
+//END_ADDED
 
-
+#endif  // MERT_FEATURE_STATS_H_

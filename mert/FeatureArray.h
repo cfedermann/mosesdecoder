@@ -1,74 +1,82 @@
 /*
  *  FeatureArray.h
- *  met - Minimum Error Training
+ *  mert - Minimum Error Rate Training
  *
  *  Created by Nicola Bertoldi on 13/05/08.
  *
  */
 
-#ifndef FEATURE_ARRAY_H
-#define FEATURE_ARRAY_H
+#ifndef MERT_FEATURE_ARRAY_H_
+#define MERT_FEATURE_ARRAY_H_
 
-#define FEATURES_TXT_BEGIN "FEATURES_TXT_BEGIN_0"
-#define FEATURES_TXT_END "FEATURES_TXT_END_0"
-#define FEATURES_BIN_BEGIN "FEATURES_BIN_BEGIN_0"
-#define FEATURES_BIN_END "FEATURES_BIN_END_0"
-
-using namespace std;
-
-#include <limits>
 #include <vector>
-#include <iostream>
-#include <fstream>
-
-#include "Util.h"
+#include <iosfwd>
 #include "FeatureStats.h"
+
+const char FEATURES_TXT_BEGIN[] = "FEATURES_TXT_BEGIN_0";
+const char FEATURES_TXT_END[] = "FEATURES_TXT_END_0";
+const char FEATURES_BIN_BEGIN[] = "FEATURES_BIN_BEGIN_0";
+const char FEATURES_BIN_END[] = "FEATURES_BIN_END_0";
 
 class FeatureArray
 {
-protected:
-	featarray_t array_;
-	size_t number_of_features;
-	std::string features;
-	
 private:
-	std::string idx; // idx to identify the utterance, it can differ from the index inside the vector
-	
+  // idx to identify the utterance. It can differ from
+  // the index inside the vector.
+  std::string m_index;
+  featarray_t m_array;
+  std::size_t m_num_features;
+  std::string m_features;
+  bool m_sparse_flag;
+
 public:
-	FeatureArray();
-	
-	~FeatureArray(){};
-		
-	inline void clear() { array_.clear(); }
-	
-	inline std::string getIndex(){ return idx; }
-	inline void setIndex(const std::string & value){ idx=value; }
+  FeatureArray();
+  ~FeatureArray();
 
-	inline FeatureStats&  get(size_t i){ return array_.at(i); }
-	inline const FeatureStats&  get(size_t i)const{ return array_.at(i); }
-	void add(FeatureStats e){ array_.push_back(e); }
+  void clear() { m_array.clear(); }
 
-	void merge(FeatureArray& e);
+  bool hasSparseFeatures() const { return m_sparse_flag; }
 
-	inline size_t size(){ return array_.size(); }
-	inline size_t NumberOfFeatures() const{ return number_of_features; }
-	inline void NumberOfFeatures(size_t v){ number_of_features = v; }
-	inline std::string Features() const{ return features; }
-	inline void Features(const std::string f){ features = f; }
-	
-	void savetxt(ofstream& outFile);
-	void savebin(ofstream& outFile);
-	void save(ofstream& outFile, bool bin=false);
-	void save(const std::string &file, bool bin=false);
-	inline void save(bool bin=false){ save("/dev/stdout",bin); }
+  std::string getIndex() const { return m_index; }
+  void setIndex(const std::string& value) { m_index = value; }
 
-	void loadtxt(ifstream& inFile, size_t n);
-	void loadbin(ifstream& inFile, size_t n);
-	void load(ifstream& inFile);
-	void load(const std::string &file);
-	
-	bool check_consistency();
+  FeatureStats& get(std::size_t i) { return m_array.at(i); }
+  const FeatureStats& get(std::size_t i) const { return m_array.at(i); }
+
+  void add(FeatureStats& e) { m_array.push_back(e); }
+
+  //ADDED BY TS
+  void swap(std::size_t i, std::size_t j) {
+    std::swap(m_array[i], m_array[j]);
+  }
+
+  void resize(std::size_t new_size) {
+    m_array.resize(std::min(new_size, m_array.size()));
+  }
+  //END_ADDED
+
+  void merge(FeatureArray& e);
+
+  std::size_t size() const { return m_array.size(); }
+
+  std::size_t NumberOfFeatures() const { return m_num_features; }
+  void NumberOfFeatures(std::size_t v) { m_num_features = v; }
+
+  std::string Features() const { return m_features; }
+  void Features(const std::string& f) { m_features = f; }
+
+  void savetxt(std::ostream* os);
+  void savebin(std::ostream* os);
+  void save(std::ostream* os, bool bin=false);
+  void save(const std::string &file, bool bin=false);
+  void save(bool bin=false);
+
+  void loadtxt(std::istream* is, std::size_t n);
+  void loadbin(std::istream* is, std::size_t n);
+  void load(std::istream* is);
+  void load(const std::string &file);
+
+  bool check_consistency() const;
 };
 
-
-#endif
+#endif  // MERT_FEATURE_ARRAY_H_

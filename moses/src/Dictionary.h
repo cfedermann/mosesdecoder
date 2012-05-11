@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_Dictionary_h
+#define moses_Dictionary_h
 
 #include <vector>
 #include "FactorTypeSet.h"
@@ -34,33 +35,22 @@ namespace Moses
 class Dictionary
 {
 protected:
-	
-	const size_t m_numScoreComponent;
-	FactorMask m_inputFactors;
-	FactorMask m_outputFactors;
+
+  const size_t m_numScoreComponent;
 
 public:
-	//! Constructor
-	Dictionary(size_t numScoreComponent);
-	//!Destructor
-	virtual ~Dictionary();
+  //! Constructor
+  Dictionary(size_t numScoreComponent);
+  //!Destructor
+  virtual ~Dictionary();
 
-	//! returns output factor types as specified by the ini file
-	const FactorMask& GetOutputFactorMask() const
-	{
-		return m_outputFactors;
-	}
-	//! returns input factor types as specified by the ini file
-	const FactorMask& GetInputFactorMask() const
-	{
-		return m_inputFactors;
-	}
 
-	//! returns whether this dictionary is to be used for Translate or Generate
-	virtual DecodeType GetDecodeType() const = 0;
+  //! returns whether this dictionary is to be used for Translate or Generate
+  virtual DecodeType GetDecodeType() const = 0;
 
-	// clean up temporary memory, called after processing each sentence
-	virtual void CleanUp();
+  // clean up temporary memory, called after processing each sentence
+  virtual void CleanUp();
 };
 
 }
+#endif

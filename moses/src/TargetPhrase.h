@@ -19,15 +19,17 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_TargetPhrase_h
+#define moses_TargetPhrase_h
 
 #include <vector>
 #include "TypeDef.h"
 #include "Phrase.h"
 #include "ScoreComponentCollection.h"
-#if HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "AlignmentInfo.h"
+
+#include "util/string_piece.hh"
+
 #ifdef HAVE_PROTOBUF
 #include "rule.pb.h"
 #endif
@@ -36,47 +38,44 @@ namespace Moses
 {
 
 class LMList;
-class PhraseDictionary;
-class GenerationDictionary;
 class ScoreProducer;
+class TranslationSystem;
+class WordPenaltyProducer;
 
 /** represents an entry on the target side of a phrase table (scores, translation, alignment)
  */
 class TargetPhrase: public Phrase
 {
-	friend std::ostream& operator<<(std::ostream&, const TargetPhrase&);
+  friend std::ostream& operator<<(std::ostream&, const TargetPhrase&);
 protected:
-	float m_transScore, m_ngramScore, m_fullScore;
-	//float m_ngramScore, m_fullScore;
-	ScoreComponentCollection m_scoreBreakdown;
+  float m_transScore;
+  float m_fullScore;
+  ScoreComponentCollection m_scoreBreakdown;
 
-	// in case of confusion net, ptr to source phrase
-	Phrase const* m_sourcePhrase; 
+  // in case of confusion net, ptr to source phrase
+  Phrase const* m_sourcePhrase;
 
-	static bool wordalignflag;
-	static bool printalign;
-	
+  const AlignmentInfo *m_alignmentInfo;
+  Word m_lhsTarget;
+
 public:
-		TargetPhrase(FactorDirection direction=Output);
-		~TargetPhrase(){};
-		
-	/** used by the unknown word handler.
-		* Set alignment to 0
-		*/
-	void SetAlignment();
+  TargetPhrase();
+  TargetPhrase(std::string out_string);
+  TargetPhrase(const Phrase &);
+  ~TargetPhrase();
 
-	//! used by the unknown word handler- these targets
-	//! don't have a translation score, so wp is the only thing used
-	void SetScore();
-	
-	//!Set score for Sentence XML target options
-	void SetScore(float score);
-	
-	//! Set score for unknown words with input weights
-	void SetScore(const Scores &scoreVector); 
+  //! used by the unknown word handler- these targets
+  //! don't have a translation score, so wp is the only thing used
+  void SetScore(const TranslationSystem* system);
 
-	
-	/*** Called immediately after creation to initialize scores.
+  //!Set score for Sentence XML target options
+  void SetScore(float score);
+
+  //! Set score for unknown words with input weights
+  void SetScore(const TranslationSystem* system, const Scores &scoreVector);
+
+
+  /*** Called immediately after creation to initialize scores.
    *
    * @param translationScoreProducer The PhraseDictionaryMemory that this TargetPhrase is contained by.
    *        Used to identify where the scores for this phrase belong in the list of all scores.
@@ -86,74 +85,81 @@ public:
    * @param weightWP the weight of the word penalty
    *
    * @TODO should this be part of the constructor?  If not, add explanation why not.
-		*/
-	void SetScore(const ScoreProducer* translationScoreProducer,
-								const Scores &scoreVector,
-								const std::vector<float> &weightT,
-								float weightWP,
-								const LMList &languageModels);
+  	*/
+  void SetScore(const ScoreProducer* translationScoreProducer,
+                const Scores &scoreVector,
+                const std::vector<float> &weightT,
+                float weightWP,
+                const LMList &languageModels);
 
-	
-	// used when creating translations of unknown words:
-	void ResetScore();
-	void SetWeights(const ScoreProducer*, const std::vector<float> &weightT);
+  void SetScoreChart(const ScoreProducer* translationScoreProducer
+                     ,const Scores &scoreVector
+                     ,const std::vector<float> &weightT
+                     ,const LMList &languageModels
+                     ,const WordPenaltyProducer* wpProducer);
 
-	TargetPhrase *MergeNext(const TargetPhrase &targetPhrase) const;
-		// used for translation step
-	
+  // used by for unknown word proc in chart decoding
+  void SetScore(const ScoreProducer* producer, const Scores &scoreVector);
+
+
+  // used when creating translations of unknown words:
+  void ResetScore();
+  void SetWeights(const ScoreProducer*, const std::vector<float> &weightT);
+
+  TargetPhrase *MergeNext(const TargetPhrase &targetPhrase) const;
+  // used for translation step
+
 #ifdef HAVE_PROTOBUF
-	void WriteToRulePB(hgmert::Rule* pb) const;
+  void WriteToRulePB(hgmert::Rule* pb) const;
 #endif
 
-/*  inline float GetTranslationScore() const
-  {
-    return m_transScore;
-  }*/
+  /*  inline float GetTranslationScore() const
+    {
+      return m_transScore;
+    }*/
   /***
    * return the estimated score resulting from our being added to a sentence
    * (it's an estimate because we don't have full n-gram info for the language model
    *  without using the (unknown) full sentence)
-   * 
+   *
    */
-  inline float GetFutureScore() const
-  {
+  inline float GetFutureScore() const {
     return m_fullScore;
   }
-	inline const ScoreComponentCollection &GetScoreBreakdown() const
-	{
-		return m_scoreBreakdown;
-	}
+  inline const ScoreComponentCollection &GetScoreBreakdown() const {
+    return m_scoreBreakdown;
+  }
 
-	//! TODO - why is this needed and is it set correctly by every phrase dictionary class ? should be set in constructor
-	void SetSourcePhrase(Phrase const* p) 
-	{
-		m_sourcePhrase=p;
-	}
-	Phrase const* GetSourcePhrase() const 
-	{
-		return m_sourcePhrase;
-	}
-	
-	
-	
-	
-	void UseWordAlignment(bool a){
-		wordalignflag=a;
-	};
-	bool UseWordAlignment() const {
-		return wordalignflag;
-	};
-	void PrintAlignmentInfo(bool a) {
-		printalign=a; 
-	}
-	bool PrintAlignmentInfo() const {
-		return printalign;
-	}
+  //! TODO - why is this needed and is it set correctly by every phrase dictionary class ? should be set in constructor
+  void SetSourcePhrase(Phrase const* p) {
+    m_sourcePhrase=p;
+  }
+  Phrase const* GetSourcePhrase() const {
+    return m_sourcePhrase;
+  }
 
-	TO_STRING();
+  void SetTargetLHS(const Word &lhs) {
+    m_lhsTarget = lhs;
+  }
+  const Word &GetTargetLHS() const {
+    return m_lhsTarget;
+  }
+
+  void SetAlignmentInfo(const StringPiece &alignString);
+  void SetAlignmentInfo(const std::set<std::pair<size_t,size_t> > &alignmentInfo);
+  void SetAlignmentInfo(const AlignmentInfo *alignmentInfo) {
+    m_alignmentInfo = alignmentInfo;
+  }
+
+  const AlignmentInfo &GetAlignmentInfo() const {
+    return *m_alignmentInfo;
+  }
+
+  TO_STRING();
 };
 
 std::ostream& operator<<(std::ostream&, const TargetPhrase&);
 
 }
 
+#endif

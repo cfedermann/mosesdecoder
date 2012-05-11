@@ -1,4 +1,4 @@
-// $Id: TranslationOptionCollection.cpp 1429 2007-07-20 13:03:12Z hieuhoang1972 $
+// $Id$
 // vim:tabstop=2
 
 /***********************************************************************
@@ -29,7 +29,7 @@ namespace Moses
 {
 DecodeGraph::~DecodeGraph()
 {
-	RemoveAllInColl(m_steps);
+  RemoveAllInColl(m_steps);
 }
 
 }

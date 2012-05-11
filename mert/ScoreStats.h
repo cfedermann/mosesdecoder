@@ -1,78 +1,97 @@
 /*
  *  ScoreStats.h
- *  met - Minimum Error Training
+ *  mert - Minimum Error Rate Training
  *
  *  Created by Nicola Bertoldi on 13/05/08.
  *
  */
 
-#ifndef SCORE_STATS_H
-#define SCORE_STATS_H
+#ifndef MERT_SCORE_STATS_H_
+#define MERT_SCORE_STATS_H_
 
-using namespace std;
-
-#include <limits>
 #include <vector>
-#include <iostream>
+#include <iosfwd>
 #include <cstdlib>
+#include <cstring>
 
-#include "Util.h"
-
-#define SCORE_STATS_MIN (numeric_limits<ScoreStatsType>::min())
-#define ATOSST(str) ((ScoreStatsType) atoi(str))
-
-#define scorebytes_ (entries_*sizeof(ScoreStatsType))
+#include "Types.h"
 
 class ScoreStats
 {
 private:
-	scorestats_t array_;		
-	size_t entries_;
-	size_t available_;
-	
+  std::size_t m_available_size;
+  std::size_t m_entries;
+
+  // TODO: Use smart pointer for exceptional-safety.
+  scorestats_t m_array;
+
 public:
-	ScoreStats();
-  ScoreStats(const size_t size);
-	ScoreStats(const ScoreStats &stats);
-	ScoreStats(std::string &theString);
-	ScoreStats& operator=(const ScoreStats &stats);
-	
-	~ScoreStats();
-	
-	bool isfull(){return (entries_ < available_)?0:1; }
-	void expand();
-	void add(ScoreStatsType v);
-		
-	inline void clear() { memset((void*) array_,0,scorebytes_); }
-	
-	inline ScoreStatsType get(size_t i){ return array_[i]; }
-	inline ScoreStatsType get(size_t i)const{ return array_[i]; }
-	inline scorestats_t getArray() const { return array_; }
-	
-	void set(std::string &theString);
+  ScoreStats();
+  explicit ScoreStats(const std::size_t size);
 
-	inline size_t bytes() const{ return scorebytes_; }
-	inline size_t size() const{ return entries_; }
-	inline size_t available() const{ return available_; }
-	
-	void savetxt(const std::string &file);
-	void savetxt(ofstream& outFile);
-	void savebin(ofstream& outFile);
-	inline void savetxt(){ savetxt("/dev/stdout"); }
+  ~ScoreStats();
 
-	
-	
-	void loadtxt(const std::string &file);
-	void loadtxt(ifstream& inFile);
-	void loadbin(ifstream& inFile);
-	
-	
-	inline void reset(){ entries_ = 0; clear(); }
+  // We intentionally allow copying.
+  ScoreStats(const ScoreStats &stats);
+  ScoreStats& operator=(const ScoreStats &stats);
 
-	/**write the whole object to a stream*/
-	friend ostream& operator<<(ostream& o, const ScoreStats& e);
+  void Copy(const ScoreStats &stats);
+
+  bool isfull() const { return (m_entries < m_available_size) ? 0 : 1; }
+
+  void expand();
+  void add(ScoreStatsType v);
+
+  void clear() {
+    std::memset((void*)m_array, 0, GetArraySizeWithBytes());
+  }
+
+  void reset() {
+    m_entries = 0;
+    clear();
+  }
+
+  ScoreStatsType get(std::size_t i) { return m_array[i]; }
+  ScoreStatsType get(std::size_t i) const { return m_array[i]; }
+  scorestats_t getArray() const { return m_array; }
+
+  void set(const std::string& str);
+
+  // Much more efficient than the above.
+  void set(const std::vector<ScoreStatsType>& stats) {
+    reset();
+    for (std::size_t i = 0; i < stats.size(); ++i) {
+      add(stats[i]);
+    }
+  }
+
+  std::size_t bytes() const { return GetArraySizeWithBytes(); }
+
+  std::size_t GetArraySizeWithBytes() const {
+    return m_entries * sizeof(ScoreStatsType);
+  }
+
+  std::size_t size() const { return m_entries; }
+
+  std::size_t available() const { return m_available_size; }
+
+  void savetxt(const std::string &file);
+  void savetxt(std::ostream* os);
+  void savebin(std::ostream* os);
+  void savetxt();
+
+  void loadtxt(const std::string &file);
+  void loadtxt(std::istream* is);
+  void loadbin(std::istream* is);
+
+  /**
+   * Write the whole object to a stream.
+   */
+  friend std::ostream& operator<<(std::ostream& o, const ScoreStats& e);
 };
 
+//ADDED_BY_TS
+bool operator==(const ScoreStats& s1, const ScoreStats& s2);
+//END_ADDED
 
-#endif
-
+#endif  // MERT_SCORE_STATS_H_

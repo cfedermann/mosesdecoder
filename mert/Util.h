@@ -1,23 +1,18 @@
 /*
  *  Util.h
- *  met - Minimum Error Training
+ *  mert - Minimum Error Rate Training
  *
  *  Created by Nicola Bertoldi on 13/05/08.
  *
  */
 
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef MERT_UTIL_H_
+#define MERT_UTIL_H_
 
-using namespace std;
-
+#include <cmath>
+#include <cstdlib>
 #include <stdexcept>
 #include <limits>
-
-#define US_NOSET (numeric_limits<unsigned short>::max())
-
-#define MAX_LINE  1024
-
 #include <vector>
 #include <map>
 #include <iostream>
@@ -25,15 +20,7 @@ using namespace std;
 #include <string>
 #include <cstring>
 
-#include <fstream>
-#include "gzfilebuf.h"
-
 #include "Types.h"
-#include "ScoreStats.h"
-#include "FeatureStats.h"
-
-class ScoreStats;
-class FeatureStats;
 
 #ifdef TRACE_ENABLE
 #define TRACE_ERR(str) { std::cerr << str; }
@@ -41,55 +28,92 @@ class FeatureStats;
 #define TRACE_ERR(str) { }
 #endif
 
-#define DELIMITER_SYMBOL " "
+const char kDefaultDelimiterSymbol[] = " ";
 
 int verboselevel();
 int setverboselevel(int v);
 
-int getNextPound(std::string &theString, std::string &substring, const std::string delimiter=DELIMITER_SYMBOL);
+
+const float kEPS = 0.0001f;
+
+template <typename T>
+bool IsAlmostEqual(T expected, T actual, float round=kEPS) {
+  if (std::abs(expected - actual) < round) {
+    return true;
+  } else {
+    std::cerr << "Fail: expected = " << expected
+              << " (actual = " << actual << ")" << std::endl;
+    return false;
+  }
+}
+
+/**
+ * Find the specified delimiter for the string 'str', and 'str' is assigned
+ * to a substring object that starts at the position of first occurrence of
+ * the delimiter in 'str'. 'substr' is copied from 'str' ranging from
+ * the start position of 'str' to the position of first occurrence of
+ * the delimiter.
+ *
+ * It returns the position of first occurrence in the queried string.
+ * If the content is not found, std::string::npos is returned.
+ */
+size_t getNextPound(std::string &str, std::string &substr,
+                    const std::string &delimiter = kDefaultDelimiterSymbol);
+
+void split(const std::string &s, char delim, std::vector<std::string> &elems);
+
+/**
+ * Split the string 'str' with specified delimitter 'delim' into tokens.
+ * The resulting tokens are set to 'res'.
+ *
+ * ex. "a,b,c" => {"a", "b", "c"}.
+ */
+void Tokenize(const char *str, const char delim, std::vector<std::string> *res);
 
 template<typename T>
 inline T Scan(const std::string &input)
 {
-	 std::stringstream stream(input);
-	 T ret;
-	 stream >> ret;
-	 return ret;
-};
+  std::stringstream stream(input);
+  T ret;
+  stream >> ret;
+  return ret;
+}
 
-class inputfilestream : public std::istream
-{
-protected:
-        std::streambuf *m_streambuf;
-	bool _good;
-public:
-  
-        inputfilestream(const std::string &filePath);
-        ~inputfilestream();
-	bool good(){return _good;}
-        void close();
-};
-
-class outputfilestream : public std::ostream
-{
-protected:
-        std::streambuf *m_streambuf;
-	bool _good;
-public:
-  
-        outputfilestream(const std::string &filePath);
-        ~outputfilestream();
-	bool good(){return _good;}
-        void close();
-};
+/**
+ * Returns true iff "str" ends with "suffix".
+ * e.g., Given str = "abc:" and suffix = ":", this function returns true.
+ */
+inline bool EndsWith(const std::string& str, const char* suffix) {
+  return str.find_last_of(suffix) == str.size() - 1;
+}
 
 template<typename T>
 inline std::string stringify(T x)
 {
-	std::ostringstream o;
-	if (!(o << x))
-		throw std::runtime_error("stringify(template<typename T>)");
-	return o.str();
+  std::ostringstream o;
+  if (!(o << x))
+    throw std::runtime_error("stringify(template<typename T>)");
+  return o.str();
+}
+
+inline ScoreStatsType ConvertCharToScoreStatsType(const char *str)
+{
+  return std::atoi(str);
+}
+
+inline ScoreStatsType ConvertStringToScoreStatsType(const std::string& str)
+{
+  return ConvertCharToScoreStatsType(str.c_str());
+}
+
+inline FeatureStatsType ConvertCharToFeatureStatsType(const char *str)
+{
+  return static_cast<FeatureStatsType>(std::atof(str));
+}
+
+inline FeatureStatsType ConvertStringToFeatureStatsType(const std::string &str)
+{
+  return ConvertCharToFeatureStatsType(str.c_str());
 }
 
 // Utilities to measure decoding time
@@ -97,5 +121,4 @@ void ResetUserTime();
 void PrintUserTime(const std::string &message);
 double GetUserTime();
 
-#endif
-
+#endif  // MERT_UTIL_H_

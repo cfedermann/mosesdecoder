@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_FactorTypeSet_h
+#define moses_FactorTypeSet_h
 
 #include <iostream>
 #include <bitset>
@@ -34,18 +35,19 @@ namespace Moses
 */
 class FactorMask : public std::bitset<MAX_NUM_FACTORS>
 {
-	friend std::ostream& operator<<(std::ostream&, const FactorMask&);
+  friend std::ostream& operator<<(std::ostream&, const FactorMask&);
 
 public:
-	//! construct object from list of FactorType.
-	explicit FactorMask(const std::vector<FactorType> &factors);
-	//! default constructor
-	inline FactorMask() {}
-	//! copy constructor
-	FactorMask(const std::bitset<MAX_NUM_FACTORS>& rhs) : std::bitset<MAX_NUM_FACTORS>(rhs) { }
+  //! construct object from list of FactorType.
+  explicit FactorMask(const std::vector<FactorType> &factors);
+  //! default constructor
+  inline FactorMask() {}
+  //! copy constructor
+  FactorMask(const std::bitset<MAX_NUM_FACTORS>& rhs) : std::bitset<MAX_NUM_FACTORS>(rhs) { }
 
 
-	TO_STRING();
+  TO_STRING();
 };
 
 }
+#endif

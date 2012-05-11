@@ -5,19 +5,9 @@
 #define TABLE_LINE_MAX_LENGTH 1000
 #define UNKNOWNSTR	"UNK"
 
-#define SAFE_GETLINE(_IS, _LINE, _SIZE, _DELIM) { \
-                _IS.getline(_LINE, _SIZE, _DELIM); \
-                if(_IS.fail() && !_IS.bad() && !_IS.eof()) _IS.clear(); \
-                if (_IS.gcount() == _SIZE-1) { \
-                  cerr << "Line too long! Buffer overflow. Delete lines >=" \
-                    << _SIZE << " chars or raise TABLE_LINE_MAX_LENGTH in phrase-extract/tables-core.cpp" \
-                    << endl; \
-                    exit(1); \
-                } \
-              }
-
 // as in beamdecoder/tables.cpp
-vector<string> tokenize( char input[] ) {
+vector<string> tokenize( const char* input )
+{
   vector< string > token;
   bool betweenWords = true;
   int start=0;
@@ -28,8 +18,7 @@ vector<string> tokenize( char input[] ) {
     if (!isSpace && betweenWords) {
       start = i;
       betweenWords = false;
-    }
-    else if (isSpace && !betweenWords) {
+    } else if (isSpace && !betweenWords) {
       token.push_back( string( input+start, i-start ) );
       betweenWords = true;
     }
@@ -39,26 +28,33 @@ vector<string> tokenize( char input[] ) {
   return token;
 }
 
-WORD_ID Vocabulary::storeIfNew( const WORD& word ) {
+bool isNonTerminal( const WORD &symbol ) {
+   return symbol.substr(0, 1) == "[" && symbol.substr(symbol.size()-1, 1) == "]";
+}
+
+WORD_ID Vocabulary::storeIfNew( const WORD& word )
+{
   map<WORD, WORD_ID>::iterator i = lookup.find( word );
-  
+
   if( i != lookup.end() )
     return i->second;
 
   WORD_ID id = vocab.size();
   vocab.push_back( word );
   lookup[ word ] = id;
-  return id;  
+  return id;
 }
 
-WORD_ID Vocabulary::getWordID( const WORD& word ) {
+WORD_ID Vocabulary::getWordID( const WORD& word )
+{
   map<WORD, WORD_ID>::iterator i = lookup.find( word );
   if( i == lookup.end() )
     return 0;
   return i->second;
 }
 
-PHRASE_ID PhraseTable::storeIfNew( const PHRASE& phrase ) {
+PHRASE_ID PhraseTable::storeIfNew( const PHRASE& phrase )
+{
   map< PHRASE, PHRASE_ID >::iterator i = lookup.find( phrase );
   if( i != lookup.end() )
     return i->second;
@@ -69,36 +65,43 @@ PHRASE_ID PhraseTable::storeIfNew( const PHRASE& phrase ) {
   return id;
 }
 
-PHRASE_ID PhraseTable::getPhraseID( const PHRASE& phrase ) {
+PHRASE_ID PhraseTable::getPhraseID( const PHRASE& phrase )
+{
   map< PHRASE, PHRASE_ID >::iterator i = lookup.find( phrase );
   if( i == lookup.end() )
     return 0;
   return i->second;
 }
 
-void PhraseTable::clear() {
+void PhraseTable::clear()
+{
   lookup.clear();
   phraseTable.clear();
 }
 
-void DTable::init() {
+void DTable::init()
+{
   for(int i = -10; i<10; i++)
     dtable[i] = -abs( i );
 }
 
-void DTable::load( const string& fileName ) {
+void DTable::load( const string& fileName )
+{
   ifstream inFile;
   inFile.open(fileName.c_str());
-  istream *inFileP = &inFile;
 
-  char line[TABLE_LINE_MAX_LENGTH];
+  std::string line;
   int i=0;
   while(true) {
     i++;
-    SAFE_GETLINE((*inFileP), line, TABLE_LINE_MAX_LENGTH, '\n');
-    if (inFileP->eof()) break;
-
-    vector<string> token = tokenize( line );
+    getline(inFile, line);
+    if (inFile.eof()) break;
+    if (!inFile) {
+      std::cerr << "Error reading from " << fileName << std::endl;
+      abort();
+    }
+    
+    vector<string> token = tokenize(line.c_str());
     if (token.size() < 2) {
       cerr << "line " << i << " in " << fileName << " too short, skipping\n";
       continue;
@@ -107,10 +110,11 @@ void DTable::load( const string& fileName ) {
     int d = atoi( token[0].c_str() );
     double prob = log( atof( token[1].c_str() ) );
     dtable[ d ] = prob;
-  }  
+  }
 }
 
-double DTable::get( int distortion ) {
+double DTable::get( int distortion )
+{
   if (dtable.find( distortion ) == dtable.end())
     return log( 0.00001 );
   return dtable[ distortion ];

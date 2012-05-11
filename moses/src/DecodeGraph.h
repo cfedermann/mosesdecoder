@@ -1,4 +1,4 @@
-// $Id: TranslationOptionCollection.cpp 1429 2007-07-20 13:03:12Z hieuhoang1972 $
+// $Id$
 // vim:tabstop=2
 
 /***********************************************************************
@@ -20,10 +20,13 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_DecodeGraph_h
+#define moses_DecodeGraph_h
 
+#include "util/check.hh"
 #include <list>
 #include <iterator>
+#include "TypeDef.h"
 
 namespace Moses
 {
@@ -34,33 +37,57 @@ class DecodeStep;
 class DecodeGraph
 {
 protected:
-	std::list<const DecodeStep*> m_steps;
-    size_t m_position;   
+  std::list<const DecodeStep*> m_steps;
+  size_t m_position;
+  size_t m_maxChartSpan;
 
 public:
-    /**
-      * position: The position of this graph within the decode sequence.
-      **/
-    DecodeGraph(size_t position): m_position(position) {}
-	//! iterators
-	typedef std::list<const DecodeStep*>::iterator iterator;
-	typedef std::list<const DecodeStep*>::const_iterator const_iterator;
-	const_iterator begin() const { return m_steps.begin(); }
-	const_iterator end() const { return m_steps.end(); }
-	
-    size_t GetPosition() const
-    {
-        return m_position;
-    }   
-    
-	~DecodeGraph();
+  /**
+    * position: The position of this graph within the decode sequence.
+    **/
+  DecodeGraph(size_t position)
+    : m_position(position)
+    , m_maxChartSpan(NOT_FOUND)
+  {}
 
-	//! Add another decode step to the graph
-	void Add(const DecodeStep *decodeStep)
-	{
-		m_steps.push_back(decodeStep);
-	}
+  // for chart decoding
+  DecodeGraph(size_t position, size_t maxChartSpan)
+    : m_position(position)
+    , m_maxChartSpan(maxChartSpan)
+  {}
+
+  //! iterators
+  typedef std::list<const DecodeStep*>::iterator iterator;
+  typedef std::list<const DecodeStep*>::const_iterator const_iterator;
+  const_iterator begin() const {
+    return m_steps.begin();
+  }
+  const_iterator end() const {
+    return m_steps.end();
+  }
+
+  virtual ~DecodeGraph();
+
+  //! Add another decode step to the graph
+  void Add(const DecodeStep *decodeStep) {
+    m_steps.push_back(decodeStep);
+  }
+
+  size_t GetSize() const {
+    return m_steps.size();
+  }
+
+  size_t GetMaxChartSpan() const {
+    CHECK(m_maxChartSpan != NOT_FOUND);
+    return m_maxChartSpan;
+  }
+
+  size_t GetPosition() const {
+    return m_position;
+  }
+
 };
 
 
 }
+#endif

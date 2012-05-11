@@ -1,4 +1,5 @@
-#pragma once
+#ifndef moses_XmlOption_h
+#define moses_XmlOption_h
 
 #include <vector>
 #include <string>
@@ -15,16 +16,24 @@ class TranslationOption;
  */
 struct XmlOption {
 
-	WordsRange range;
-	TargetPhrase targetPhrase;
-	std::vector<XmlOption*> linkedOptions;
+  WordsRange range;
+  TargetPhrase targetPhrase;
 
-	XmlOption(const WordsRange &r, const TargetPhrase &tp): range(r), targetPhrase(tp), linkedOptions(0) {}
+  XmlOption(const WordsRange &r, const TargetPhrase &tp)
+    : range(r), targetPhrase(tp)
+  {}
 
 };
 
-bool ProcessAndStripXMLTags(std::string &line,std::vector<std::vector<XmlOption*> > &res, ReorderingConstraint &reorderingConstraint, std::vector< size_t > &walls );
+std::string ParseXmlTagAttribute(const std::string& tag,const std::string& attributeName);
+std::string TrimXml(const std::string& str, const std::string& lbrackStr="<", const std::string& rbrackStr=">") ;
+bool isXmlTag(const std::string& tag, const std::string& lbrackStr="<", const std::string& rbrackStr=">");
+std::vector<std::string> TokenizeXml(const std::string& str, const std::string& lbrackStr="<", const std::string& rbrackStr=">");
+
+bool ProcessAndStripXMLTags(std::string &line, std::vector<XmlOption*> &res, ReorderingConstraint &reorderingConstraint, std::vector< size_t > &walls, 
+	const std::string& lbrackStr="<", const std::string& rbrackStr=">");
 
 }
 
+#endif
 

@@ -19,7 +19,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ***********************************************************************/
 
-#pragma once
+#ifndef moses_Sentence_h
+#define moses_Sentence_h
 
 #include <vector>
 #include <string>
@@ -38,65 +39,70 @@ class TranslationOptionCollection;
 
 
 /***
- * A Phrase class with an ID. Used specifically as source input so contains functionality to read 
+ * A Phrase class with an ID. Used specifically as source input so contains functionality to read
  *	from IODevice and create trans opt
  */
 class Sentence : public Phrase, public InputType
 {
 
- private:
- 
-	/**
-	 * Utility method that takes in a string representing an XML tag and the name of the attribute,
-	 * and returns the value of that tag if present, empty string otherwise
-	 */
-	static std::string ParseXmlTagAttribute(const std::string& tag,const std::string& attributeName);
-	std::vector <TranslationOption*> m_xmlOptionsList;
-	std::vector <bool> m_xmlCoverageMap;
+private:
 
- public:
-	Sentence(FactorDirection direction)	: Phrase(direction), InputType()
-	{
-	}
+  /**
+   * Utility method that takes in a string representing an XML tag and the name of the attribute,
+   * and returns the value of that tag if present, empty string otherwise
+   */
+  std::vector <TranslationOption*> m_xmlOptionsList;
+  std::vector <bool> m_xmlCoverageMap;
 
-	InputTypeEnum GetType() const
-	{	return SentenceInput;}
+  NonTerminalSet m_defaultLabelSet;
 
-	//! Calls Phrase::GetSubString(). Implements abstract InputType::GetSubString()
-	Phrase GetSubString(const WordsRange& r) const 
-	{
-		return Phrase::GetSubString(r);
-	}
+  void InitStartEndWord();
 
-	//! Calls Phrase::GetWord(). Implements abstract InputType::GetWord()
-	const Word& GetWord(size_t pos) const
-	{
-		return Phrase::GetWord(pos);
-	}
 
-	//! Calls Phrase::GetSize(). Implements abstract InputType::GetSize()
-	size_t GetSize() const 
-	{
-		return Phrase::GetSize();
-	}
-	
-	//! Returns true if there were any XML tags parsed that at least partially covered the range passed
-	bool XmlOverlap(size_t startPos, size_t endPos) const;
+public:
+  Sentence();
 
-	//! populates vector argument with XML force translation options for the specific range passed
-	void GetXmlTranslationOptions(std::vector <TranslationOption*> &list, size_t startPos, size_t endPos) const;
+  InputTypeEnum GetType() const {
+    return SentenceInput;
+  }
 
-	int Read(std::istream& in,const std::vector<FactorType>& factorOrder);
-	void Print(std::ostream& out) const;
+  //! Calls Phrase::GetSubString(). Implements abstract InputType::GetSubString()
+  Phrase GetSubString(const WordsRange& r) const {
+    return Phrase::GetSubString(r);
+  }
 
-	TranslationOptionCollection* CreateTranslationOptionCollection() const;
-	
-	void CreateFromString(const std::vector<FactorType> &factorOrder
-												, const std::string &phraseString
-												, const std::string &factorDelimiter);
-	
+  //! Calls Phrase::GetWord(). Implements abstract InputType::GetWord()
+  const Word& GetWord(size_t pos) const {
+    return Phrase::GetWord(pos);
+  }
+
+  //! Calls Phrase::GetSize(). Implements abstract InputType::GetSize()
+  size_t GetSize() const {
+    return Phrase::GetSize();
+  }
+
+  //! Returns true if there were any XML tags parsed that at least partially covered the range passed
+  bool XmlOverlap(size_t startPos, size_t endPos) const;
+
+  //! populates vector argument with XML force translation options for the specific range passed
+  void GetXmlTranslationOptions(std::vector <TranslationOption*> &list, size_t startPos, size_t endPos) const;
+
+  int Read(std::istream& in,const std::vector<FactorType>& factorOrder);
+  void Print(std::ostream& out) const;
+
+  TranslationOptionCollection* CreateTranslationOptionCollection(const TranslationSystem* system) const;
+
+  void CreateFromString(const std::vector<FactorType> &factorOrder
+                        , const std::string &phraseString
+                        , const std::string &factorDelimiter);
+
+  const NonTerminalSet &GetLabelSet(size_t /*startPos*/, size_t /*endPos*/) const {
+    return m_defaultLabelSet;
+  }
+
 };
 
 
 }
 
+#endif

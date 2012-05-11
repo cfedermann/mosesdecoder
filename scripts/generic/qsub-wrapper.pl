@@ -7,14 +7,14 @@ use strict;
 #Default parameters 
 #parameters for submiiting processes through SGE
 #NOTE: group name is ws06ossmt (with 2 's') and not ws06osmt (with 1 's')
-my $queueparameters="-l ws06ossmt=true -l mem_free=0.5G";
+my $queueparameters="";
 
 # look for the correct pwdcmd 
 my $pwdcmd = getPwdCmd();
 
 my $workingdir = `$pwdcmd`; chomp $workingdir;
 my $tmpdir="$workingdir/tmp$$";
-my $jobscript="$workingdir/job$$";
+my $jobscript="$workingdir/job$$.sh";
 my $qsubout="$workingdir/out.job$$";
 my $qsuberr="$workingdir/err.job$$";
 
@@ -26,8 +26,8 @@ my $dbg="";
 my $version="";
 my $qsubname="WR$$";
 my $cmd="";
-my $cmdout="";
-my $cmderr="";
+my $cmdout=undef;
+my $cmderr=undef;
 my $parameters="";
 my $old_sge = 0; # assume grid engine < 6.0
 
@@ -77,8 +77,10 @@ sub usage(){
 #printparameters
 sub print_parameters(){
   print STDERR "command: $cmd\n";
-  print STDERR "file for stdout: $cmdout\n";
-  print STDERR "file for stderr: $cmderr\n";
+  if (defined($cmdout)){ print STDERR "file for stdout: $cmdout\n"; }
+  else { print STDERR "file for stdout is not defined, stdout is discarded\n"; }
+  if (defined($cmderr)){ print STDERR "file for stdout: $cmderr\n"; }
+  else { print STDERR "file for stderr is not defined, stderr is discarded\n"; }
   print STDERR "Qsub name: $qsubname\n";
   print STDERR "Queue parameters: $queueparameters\n";
   print STDERR "parameters directly passed to cmd: $parameters\n";
@@ -87,38 +89,40 @@ sub print_parameters(){
 
 #script creation
 sub preparing_script(){
-  my $scriptheader="\#\!/bin/csh\n\n";
+  my $scriptheader="\#\!/bin/bash\n# the above line is ignored by qsub, unless parameter \"-b yes\" is set!\n\n";
   $scriptheader.="uname -a\n\n";
 
   $scriptheader.="cd $workingdir\n\n";
     
-  open (OUT, "> ${jobscript}.csh");
+  open (OUT, "> $jobscript");
   print OUT $scriptheader;
 
-  print OUT "($cmd $parameters > $tmpdir/cmdout$$ ) >& $tmpdir/cmderr$$\n\n";
-  print OUT "echo exit status \$\?\n\n";
+  print OUT "if $cmd $parameters > $tmpdir/cmdout$$ 2> $tmpdir/cmderr$$ ; then
+    echo 'succeeded'
+else
+    echo failed with exit status \$\?
+    die=1
+fi
+";
 
-  if ($cmdout){
-    print OUT "\\mv -f $tmpdir/cmdout$$ $cmdout\n\n";
-    print OUT "echo exit status \$\?\n\n";
+  if (defined $cmdout){
+    print OUT "mv -f $tmpdir/cmdout$$ $cmdout || echo failed to preserve the log: $tmpdir/cmdout$$\n\n";
   }
   else{
-    print OUT "\\rm -f $tmpdir/cmdout$$\n\n";
-    print OUT "echo exit status \$\?\n\n";
+    print OUT "rm -f $tmpdir/cmdout$$\n\n";
   }
 
-  if ($cmderr){
-    print OUT "\\mv -f $tmpdir/cmderr$$ $cmderr\n\n";
-    print OUT "echo exit status \$\?\n\n";
+  if (defined $cmderr){
+    print OUT "mv -f $tmpdir/cmderr$$ $cmderr || echo failed to preserve the log: $tmpdir/cmderr$$\n\n";
   }
   else{
-    print OUT "\\rm -f $tmpdir/cmderr$$\n\n";
-    print OUT "echo exit status \$\?\n\n";
+    print OUT "rm -f $tmpdir/cmderr$$\n\n";
   }
+  print OUT "if [ x\$die == 1 ]; then exit 1; fi\n";
   close(OUT);
 
-  #setting permissions of each script
-  chmod(oct(755),"${jobscript}.csh");
+  #setting permissions of the script
+  chmod(oct(755),$jobscript);
 }
 
 #######################
@@ -134,28 +138,32 @@ preparing_script();
 
 my $maysync = $old_sge ? "" : "-sync y";
 
-# submit the main job
-my $qsubcmd="qsub $queueparameters $maysync -V -o $qsubout -e $qsuberr -N $qsubname ${jobscript}.csh >& ${jobscript}.log";
+# create the qsubcmd to submit to the queue with the parameter "-b yes"
+my $qsubcmd="qsub $queueparameters $maysync -V -o $qsubout -e $qsuberr -N $qsubname -b yes $jobscript > $jobscript.log 2>&1";
+
+#run the qsubcmd 
 safesystem($qsubcmd) or die;
 
 #getting id of submitted job
 my $res;
-open (IN,"${jobscript}.log") or die "Can't read main job id: ${jobscript}.log";
+open (IN,"$jobscript.log") or die "Can't read main job id: $jobscript.log";
 chomp($res=<IN>);
-split(/\s+/,$res);
-my $id=$_[2];
+my @arrayStr = split(/\s+/,$res);
+my $id=$arrayStr[2];
+die "Failed to get job id from $jobscript.log, got: $res"
+  if $id !~ /^[0-9]+$/;
 close(IN);
 
-print SDTERR " res:$res\n";
-print SDTERR " id:$id\n";
+print STDERR " res:$res\n";
+print STDERR " id:$id\n";
 
 if ($old_sge) {
   # need to workaround -sync, add another job that will wait for the main one
   # prepare a fake waiting script
-  my $syncscript = "${jobscript}.sync_workaround_script.sh";
+  my $syncscript = "$jobscript.sync_workaround_script.sh";
   safesystem("echo 'date' > $syncscript") or die;
 
-  my $checkpointfile = "${jobscript}.sync_workaround_checkpoint";
+  my $checkpointfile = "$jobscript.sync_workaround_checkpoint";
 
   # ensure checkpoint does not exist
   safesystem("\\rm -f $checkpointfile") or die;
@@ -189,7 +197,7 @@ sub check_exit_status(){
   print STDERR "check_exit_status of submitted job $id\n";
   open(IN,"$qsubout") or die "Can't read $qsubout";
   while (<IN>){
-    $failure=1 if (/exit status 1/);
+    $failure=1 if (/failed with exit status/);
   }
   close(IN);
   return $failure;
@@ -209,7 +217,7 @@ sub kill_all_and_quit(){
 sub remove_temporary_files(){
   #removing temporary files
 
-  unlink("${jobscript}.csh");
+  unlink("${jobscript}");
   unlink("${jobscript}.log");
   unlink("$qsubout");
   unlink("$qsuberr");
