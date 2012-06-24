@@ -248,7 +248,7 @@ UINT64 TargetPhrase::ReadOtherInfoFromFile(UINT64 filePos, std::fstream &fileTPC
   return memUsed;
 }
 
-UINT64 TargetPhrase::ReadFromFile(std::fstream &fileTP, size_t numFactors)
+UINT64 TargetPhrase::ReadFromFile(std::fstream &fileTP)
 {
   UINT64 bytesRead = 0;
 
@@ -260,7 +260,7 @@ UINT64 TargetPhrase::ReadFromFile(std::fstream &fileTP, size_t numFactors)
 
   for (size_t ind = 0; ind < numWords; ++ind) {
     Word *word = new Word();
-    bytesRead += word->ReadFromFile(fileTP, numFactors);
+    bytesRead += word->ReadFromFile(fileTP);
     AddWord(word);
   }
 
@@ -303,6 +303,23 @@ UINT64 TargetPhrase::ReadScoresFromFile(std::fstream &fileTPColl)
   std::transform(m_scores.begin(),m_scores.end(),m_scores.begin(), Moses::FloorScore);
 
   return bytesRead;
+}
+
+void TargetPhrase::DebugPrint(ostream &out, const Vocab &vocab) const
+{
+  Phrase::DebugPrint(out, vocab);
+  
+  for (size_t ind = 0; ind < m_align.size(); ++ind) {
+    const AlignPair &alignPair = m_align[ind];
+    out << alignPair.first << "-" << alignPair.second << " ";
+  }
+  out << ", ";
+
+  for (size_t ind = 0; ind < m_scores.size(); ++ind) {
+    out << m_scores[ind] << " ";
+  }
+
+  return;
 }
 
 std::ostream& operator<<(std::ostream &out, const TargetPhrase &phrase)
